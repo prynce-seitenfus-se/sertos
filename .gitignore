@@ -29,3 +29,5 @@ coverage/
 .idea/
 *.swp
 *~
+*.bin
+.history/
