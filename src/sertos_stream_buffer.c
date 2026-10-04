@@ -17,7 +17,7 @@
  * @param handle Pointer to SertosStreamBuffer.
  * @return true if handle is non-null and valid.
  */
-static inline bool is_valid_handle(const SertosStreamBuffer* handle)
+static inline __attribute__((no_instrument_function)) bool is_valid_handle(const SertosStreamBuffer* handle)
 {
     if (handle == NULL) {
         return false;
@@ -33,9 +33,9 @@ static inline bool is_valid_handle(const SertosStreamBuffer* handle)
  * @param length Byte length.
  * @return true if all parameters are valid.
  */
-static bool is_send_params_valid(const SertosStreamBuffer* handle,
-                                 const void* data,
-                                 size_t length)
+static __attribute__((no_instrument_function)) bool is_send_params_valid(const SertosStreamBuffer* handle,
+                                                                          const void* data,
+                                                                          size_t length)
 {
     if (!is_valid_handle(handle)) {
         return false;
@@ -51,9 +51,9 @@ static bool is_send_params_valid(const SertosStreamBuffer* handle,
  * @param max_length Maximum byte length.
  * @return true if all parameters are valid.
  */
-static bool is_recv_params_valid(const SertosStreamBuffer* handle,
-                                 const void* buffer,
-                                 size_t max_length)
+static __attribute__((no_instrument_function)) bool is_recv_params_valid(const SertosStreamBuffer* handle,
+                                                                          const void* buffer,
+                                                                          size_t max_length)
 {
     if (!is_valid_handle(handle)) {
         return false;
@@ -66,7 +66,7 @@ static bool is_recv_params_valid(const SertosStreamBuffer* handle,
  *
  * @param unblocked Unblocked task pointer.
  */
-static void notify_unblocked_task(const SertosTaskControlBlock* unblocked)
+static __attribute__((no_instrument_function)) void notify_unblocked_task(const SertosTaskControlBlock* unblocked)
 {
     if ((unblocked != NULL) && sertos_scheduler_is_running()) {
         sertos_scheduler_reschedule();
@@ -79,8 +79,8 @@ static void notify_unblocked_task(const SertosTaskControlBlock* unblocked)
  * @param unblocked Task unblocked by ISR operation.
  * @param out_higher_prio_woken Pointer to store flag indicating higher priority woken.
  */
-static void update_higher_prio_woken(const SertosTaskControlBlock* unblocked,
-                                     bool* out_higher_prio_woken)
+static __attribute__((no_instrument_function)) void update_higher_prio_woken(const SertosTaskControlBlock* unblocked,
+                                                                              bool* out_higher_prio_woken)
 {
     if ((unblocked != NULL) && (out_higher_prio_woken != NULL)) {
         SertosTaskControlBlock* current = sertos_scheduler_get_current_tcb();
@@ -96,7 +96,7 @@ static void update_higher_prio_woken(const SertosTaskControlBlock* unblocked,
  * @param rb Pointer to the RingBuffer instance.
  * @return Number of free bytes available for writing.
  */
-static size_t stream_buffer_free_bytes(const RingBuffer* rb)
+static __attribute__((no_instrument_function)) size_t stream_buffer_free_bytes(const RingBuffer* rb)
 {
     size_t cap = ring_buffer_capacity(rb);
     size_t cnt = ring_buffer_count(rb);
@@ -109,7 +109,7 @@ static size_t stream_buffer_free_bytes(const RingBuffer* rb)
  * @param value Input value.
  * @return Power of 2 value >= value.
  */
-static size_t next_power_of_two(size_t value)
+static __attribute__((no_instrument_function)) size_t next_power_of_two(size_t value)
 {
     size_t p = 2U;
     while (p < value) {

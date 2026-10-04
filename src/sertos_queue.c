@@ -17,7 +17,7 @@
  * @param rb Pointer to the RingBuffer instance.
  * @return Number of free bytes available for writing.
  */
-static size_t queue_free_bytes(const RingBuffer* rb)
+static __attribute__((no_instrument_function)) size_t queue_free_bytes(const RingBuffer* rb)
 {
     size_t cap = ring_buffer_capacity(rb);
     size_t cnt = ring_buffer_count(rb);
@@ -31,7 +31,9 @@ static size_t queue_free_bytes(const RingBuffer* rb)
  * @param dest Destination buffer.
  * @param count Number of bytes to peek.
  */
-static void queue_peek_bytes(const RingBuffer* rb, uint8_t* dest, size_t count)
+static __attribute__((no_instrument_function)) void queue_peek_bytes(const RingBuffer* rb,
+                                                                      uint8_t* dest,
+                                                                      size_t count)
 {
     size_t tail = atomic_load_relaxed(&rb->tail);
     size_t i;
@@ -47,7 +49,7 @@ static void queue_peek_bytes(const RingBuffer* rb, uint8_t* dest, size_t count)
  * @param value Input value.
  * @return Power of 2 value >= value.
  */
-static size_t next_power_of_two(size_t value)
+static __attribute__((no_instrument_function)) size_t next_power_of_two(size_t value)
 {
     size_t p = 2U;
     while (p < value) {

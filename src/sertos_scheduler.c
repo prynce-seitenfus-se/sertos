@@ -101,7 +101,7 @@ static uint8_t s_idle_stack[SERTOS_CONFIG_IDLE_TASK_STACK_SIZE] __attribute__((a
  *
  * @param param Unused context pointer.
  */
-static void idle_task_entry(void* param)
+static __attribute__((no_instrument_function)) void idle_task_entry(void* param)
 {
     (void)param;
     while (true) {
@@ -122,7 +122,7 @@ static void idle_task_entry(void* param)
  *
  * @return true if at least one task unblocked, false otherwise.
  */
-static bool process_delayed_tasks(void)
+static __attribute__((no_instrument_function)) bool process_delayed_tasks(void)
 {
     LinkedListNode* curr_node;
     LinkedListNode* next_node;
@@ -160,7 +160,7 @@ static bool process_delayed_tasks(void)
 /**
  * @brief Performs round-robin rotation for tasks of the current priority.
  */
-static void process_time_slicing(void)
+static __attribute__((no_instrument_function)) void process_time_slicing(void)
 {
     LinkedList* current_queue;
 
@@ -241,7 +241,7 @@ SertosStatus sertos_scheduler_init(void)
     return sertos_scheduler_init_with_config(NULL);
 }
 
-SertosStatus sertos_scheduler_add_ready(SertosTaskControlBlock* tcb)
+__attribute__((no_instrument_function)) SertosStatus sertos_scheduler_add_ready(SertosTaskControlBlock* tcb)
 {
     if ((tcb == NULL) || (tcb->priority >= SERTOS_CONFIG_MAX_PRIORITIES)) {
         return SERTOS_STATUS_ERROR_INVALID_PARAM;
@@ -254,7 +254,7 @@ SertosStatus sertos_scheduler_add_ready(SertosTaskControlBlock* tcb)
     return SERTOS_STATUS_OK;
 }
 
-SertosStatus sertos_scheduler_remove_ready(SertosTaskControlBlock* tcb)
+__attribute__((no_instrument_function)) SertosStatus sertos_scheduler_remove_ready(SertosTaskControlBlock* tcb)
 {
     if ((tcb == NULL) || (tcb->priority >= SERTOS_CONFIG_MAX_PRIORITIES)) {
         return SERTOS_STATUS_ERROR_INVALID_PARAM;
@@ -270,7 +270,7 @@ SertosStatus sertos_scheduler_remove_ready(SertosTaskControlBlock* tcb)
     return SERTOS_STATUS_OK;
 }
 
-SertosTaskControlBlock* sertos_scheduler_select_next_task(void)
+__attribute__((no_instrument_function)) SertosTaskControlBlock* sertos_scheduler_select_next_task(void)
 {
     size_t highest_prio = 0U;
     LinkedListNode* head_node;
@@ -294,7 +294,9 @@ SertosTaskControlBlock* sertos_scheduler_select_next_task(void)
  * @param visit Visitor callback.
  * @param ctx   Opaque context forwarded to the visitor.
  */
-static void visit_list_state_nodes(LinkedList* list, SertosTaskVisitor visit, void* ctx)
+static __attribute__((no_instrument_function)) void visit_list_state_nodes(LinkedList* list,
+                                                                           SertosTaskVisitor visit,
+                                                                           void* ctx)
 {
     LinkedListNode* node;
     SertosTaskControlBlock* task;
@@ -307,7 +309,7 @@ static void visit_list_state_nodes(LinkedList* list, SertosTaskVisitor visit, vo
     }
 }
 
-void sertos_scheduler_visit_all_tasks(SertosTaskVisitor visit, void* ctx)
+__attribute__((no_instrument_function)) void sertos_scheduler_visit_all_tasks(SertosTaskVisitor visit, void* ctx)
 {
     uint32_t crit_status;
 
@@ -320,7 +322,7 @@ void sertos_scheduler_visit_all_tasks(SertosTaskVisitor visit, void* ctx)
     sertos_port_exit_critical(crit_status);
 }
 
-void sertos_scheduler_register_task(SertosTaskControlBlock* tcb)
+__attribute__((no_instrument_function)) void sertos_scheduler_register_task(SertosTaskControlBlock* tcb)
 {
     if (tcb == NULL) {
         return;
@@ -345,7 +347,7 @@ SertosTaskControlBlock* sertos_scheduler_get_idle_tcb(void)
     return &s_idle_tcb;
 }
 
-SertosTaskControlBlock* sertos_scheduler_perform_switch(void)
+__attribute__((no_instrument_function)) SertosTaskControlBlock* sertos_scheduler_perform_switch(void)
 {
     SertosTaskControlBlock* next_task;
     SertosTaskControlBlock* prev_task;
@@ -364,7 +366,7 @@ SertosTaskControlBlock* sertos_scheduler_perform_switch(void)
     return sertos_current_tcb;
 }
 
-void sertos_scheduler_switch_context(void)
+__attribute__((no_instrument_function)) void sertos_scheduler_switch_context(void)
 {
     SertosTaskControlBlock* next_task;
     uint32_t crit;
@@ -392,7 +394,7 @@ void sertos_scheduler_switch_context(void)
     }
 }
 
-void sertos_scheduler_reschedule(void)
+__attribute__((no_instrument_function)) void sertos_scheduler_reschedule(void)
 {
     SertosTaskControlBlock* next_task;
     uint32_t crit;
@@ -431,7 +433,7 @@ void sertos_scheduler_stop(void)
     sertos_port_stop_scheduler();
 }
 
-void sertos_scheduler_tick(void)
+__attribute__((no_instrument_function)) void sertos_scheduler_tick(void)
 {
     uint32_t crit_status;
     bool need_reschedule;
@@ -499,7 +501,7 @@ bool sertos_scheduler_is_locked(void)
     return (s_lock_nesting > 0U);
 }
 
-bool sertos_scheduler_is_running(void)
+__attribute__((no_instrument_function)) bool sertos_scheduler_is_running(void)
 {
     return s_is_running;
 }
@@ -509,7 +511,7 @@ SertosTick sertos_scheduler_get_tick_count(void)
     return (SertosTick)atomic_load_acquire(&s_system_ticks);
 }
 
-uint32_t sertos_scheduler_get_tick_rate_hz(void)
+__attribute__((no_instrument_function)) uint32_t sertos_scheduler_get_tick_rate_hz(void)
 {
     return (s_tick_rate_hz > 0U) ? s_tick_rate_hz : SERTOS_CONFIG_TICK_RATE_HZ;
 }
@@ -589,7 +591,8 @@ void sertos_scheduler_set_current_tcb(SertosTaskControlBlock* tcb)
     sertos_current_tcb = tcb;
 }
 
-static void insert_wait_list_priority(LinkedList* wait_list, SertosTaskControlBlock* tcb)
+static __attribute__((no_instrument_function)) void insert_wait_list_priority(LinkedList* wait_list,
+                                                                              SertosTaskControlBlock* tcb)
 {
     LinkedListNode* curr;
     SertosTaskControlBlock* iter_task;
@@ -614,7 +617,8 @@ static void insert_wait_list_priority(LinkedList* wait_list, SertosTaskControlBl
     linked_list_insert_tail_direct(wait_list, &tcb->event_node);
 }
 
-void sertos_scheduler_wait_list_remove(LinkedList* wait_list, SertosTaskControlBlock* tcb)
+__attribute__((no_instrument_function)) void sertos_scheduler_wait_list_remove(LinkedList* wait_list,
+                                                                               SertosTaskControlBlock* tcb)
 {
     if ((wait_list == NULL) || (tcb == NULL) || (tcb->event_node.next == NULL)) {
         return;
@@ -624,7 +628,8 @@ void sertos_scheduler_wait_list_remove(LinkedList* wait_list, SertosTaskControlB
     tcb->event_node.prev = NULL;
 }
 
-SertosTaskControlBlock* sertos_scheduler_wait_list_unblock_highest(LinkedList* wait_list)
+__attribute__((no_instrument_function)) SertosTaskControlBlock*
+sertos_scheduler_wait_list_unblock_highest(LinkedList* wait_list)
 {
     LinkedListNode* head;
     SertosTaskControlBlock* task;
@@ -651,7 +656,8 @@ SertosTaskControlBlock* sertos_scheduler_wait_list_unblock_highest(LinkedList* w
     return task;
 }
 
-SertosStatus sertos_scheduler_wait_list_block(LinkedList* wait_list, SertosTick timeout)
+__attribute__((no_instrument_function)) SertosStatus
+sertos_scheduler_wait_list_block(LinkedList* wait_list, SertosTick timeout)
 {
     uint32_t crit_status;
     SertosTaskControlBlock* current;

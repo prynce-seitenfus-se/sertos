@@ -174,7 +174,7 @@ bool sertos_timer_is_active(SertosTimerHandle handle)
     return handle->is_active;
 }
 
-void sertos_timer_tick(void)
+__attribute__((no_instrument_function)) void sertos_timer_tick(void)
 {
     LinkedListNode* curr;
     LinkedListNode* next;

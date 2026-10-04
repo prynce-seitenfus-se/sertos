@@ -47,7 +47,7 @@ typedef struct StatsFillContext {
  * @param total Denominator total run-time.
  * @return Share in hundredths of a percent (0..10000), or 0 if total is 0.
  */
-static uint32_t compute_percent_x100(SertosRunCount part, SertosRunCount total)
+static __attribute__((no_instrument_function)) uint32_t compute_percent_x100(SertosRunCount part, SertosRunCount total)
 {
     if (total == 0U) {
         return 0U;
@@ -62,7 +62,7 @@ static uint32_t compute_percent_x100(SertosRunCount part, SertosRunCount total)
  * @param tcb Task control block to reset.
  * @param ctx Pointer to the current run-time counter sample.
  */
-static void reset_visitor(SertosTaskControlBlock* tcb, void* ctx)
+static __attribute__((no_instrument_function)) void reset_visitor(SertosTaskControlBlock* tcb, void* ctx)
 {
     const uint32_t* now = (const uint32_t*)ctx;
 
@@ -77,7 +77,7 @@ static void reset_visitor(SertosTaskControlBlock* tcb, void* ctx)
  * @param tcb Task control block to sum.
  * @param ctx Pointer to a StatsSumContext.
  */
-static void sum_visitor(SertosTaskControlBlock* tcb, void* ctx)
+static __attribute__((no_instrument_function)) void sum_visitor(SertosTaskControlBlock* tcb, void* ctx)
 {
     StatsSumContext* sum = (StatsSumContext*)ctx;
 
@@ -91,7 +91,7 @@ static void sum_visitor(SertosTaskControlBlock* tcb, void* ctx)
  * @param tcb Task control block to capture.
  * @param ctx Pointer to a StatsFillContext.
  */
-static void fill_visitor(SertosTaskControlBlock* tcb, void* ctx)
+static __attribute__((no_instrument_function)) void fill_visitor(SertosTaskControlBlock* tcb, void* ctx)
 {
     StatsFillContext* fill = (StatsFillContext*)ctx;
     SertosTaskStats* rec;
@@ -110,7 +110,7 @@ static void fill_visitor(SertosTaskControlBlock* tcb, void* ctx)
     }
 }
 
-void sertos_stats_set_enabled(bool enabled)
+__attribute__((no_instrument_function)) void sertos_stats_set_enabled(bool enabled)
 {
     s_stats_enabled = enabled;
 }
@@ -120,7 +120,8 @@ bool sertos_stats_is_enabled(void)
     return s_stats_enabled;
 }
 
-void sertos_stats_on_switch(SertosTaskControlBlock* prev, SertosTaskControlBlock* next)
+__attribute__((no_instrument_function)) void sertos_stats_on_switch(SertosTaskControlBlock* prev,
+                                                                     SertosTaskControlBlock* next)
 {
     uint32_t now;
     uint32_t delta;
@@ -144,7 +145,7 @@ void sertos_stats_on_switch(SertosTaskControlBlock* prev, SertosTaskControlBlock
     }
 }
 
-void sertos_stats_reset(void)
+__attribute__((no_instrument_function)) void sertos_stats_reset(void)
 {
     uint32_t now;
 

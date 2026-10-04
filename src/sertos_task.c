@@ -20,7 +20,7 @@
  * @param config Pointer to task configuration structure.
  * @return SERTOS_STATUS_OK if valid, or error status code.
  */
-static SertosStatus validate_task_config(const SertosTaskConfig* config)
+static __attribute__((no_instrument_function)) SertosStatus validate_task_config(const SertosTaskConfig* config)
 {
     uintptr_t buffer_addr;
 
@@ -53,9 +53,9 @@ static SertosStatus validate_task_config(const SertosTaskConfig* config)
  * @param config Pointer to validated configuration.
  * @param is_static True if statically allocated.
  */
-static void init_tcb_and_stack(SertosTaskControlBlock* tcb,
-                               const SertosTaskConfig* config,
-                               bool is_static)
+static __attribute__((no_instrument_function)) void init_tcb_and_stack(SertosTaskControlBlock* tcb,
+                                                                        const SertosTaskConfig* config,
+                                                                        bool is_static)
 {
     uintptr_t stack_base_addr;
     uintptr_t stack_top_addr;

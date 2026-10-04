@@ -267,9 +267,27 @@ The kernel can also be built using CMake:
 
 ```powershell
 # Configure and build library for host simulation
-cmake -B build -G "MinGW Makefiles"
+cmake -B build -G "MinGW Makefiles" -DSERTOS_PORT=mingw64
 cmake --build build
+
+# Build the optional instrumented variant
+cmake --build build --target sertos_kernel_instrumented
 ```
+
+The instrumented target creates
+`lib/mingw64/libsertos_mingw64_instrumented.a` with
+`-finstrument-functions` applied to the SerTOS API translation units under
+`src/`. Port and module dependency translation units remain uninstrumented.
+Header-defined inline helpers used by an instrumented API translation unit are
+instrumented unless marked `__attribute__((no_instrument_function))`; the
+internal scheduler, statistics, timer, and dependency helpers used by this
+target carry that attribute so the profile focuses on API calls.
+Instrumented functions call `__cyg_profile_func_enter()` and
+`__cyg_profile_func_exit()`, which the application must provide. Mark those
+callbacks with the compiler's `no_instrument_function` attribute to prevent
+recursive instrumentation. The regular `sertos_kernel` target remains
+uninstrumented and is built by default. Application translation units need
+their own instrumentation compile option if they should also be profiled.
 
 ---
 

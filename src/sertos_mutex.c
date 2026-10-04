@@ -16,7 +16,8 @@
  * @param mutex Pointer to the mutex instance.
  * @param current Pointer to the higher-priority task requesting the mutex.
  */
-static void apply_priority_inheritance(SertosMutex* mutex, SertosTaskControlBlock* current)
+static __attribute__((no_instrument_function)) void apply_priority_inheritance(SertosMutex* mutex,
+                                                                               SertosTaskControlBlock* current)
 {
     bool was_ready;
 
@@ -38,7 +39,8 @@ static void apply_priority_inheritance(SertosMutex* mutex, SertosTaskControlBloc
  * @param mutex Pointer to the mutex instance.
  * @param current Pointer to the owner task releasing the lock.
  */
-static void restore_owner_priority(SertosMutex* mutex, SertosTaskControlBlock* current)
+static __attribute__((no_instrument_function)) void restore_owner_priority(SertosMutex* mutex,
+                                                                            SertosTaskControlBlock* current)
 {
     bool was_ready;
 
