@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 set -eu
 
+instrumented=0
+for arg in "$@"; do
+    case "$arg" in
+        -i|--instrumented)
+            instrumented=1
+            ;;
+        -h|--help)
+            echo "Usage: $0 [-i|--instrumented]"
+            exit 0
+            ;;
+        *)
+            echo "Unknown argument: $arg" >&2
+            exit 1
+            ;;
+    esac
+done
+
 core_sources=(
     src/sertos_task.c
     src/sertos_scheduler.c
@@ -8,6 +25,7 @@ core_sources=(
     src/sertos_sem.c
     src/sertos_mutex.c
     src/sertos_queue.c
+    src/sertos_stream_buffer.c
     src/sertos_timer.c
 )
 
@@ -41,7 +59,11 @@ fi
 
 lib_dir=lib/posix
 obj_dir=build/posix
-library="$lib_dir/libsertos_posix.a"
+if [ "$instrumented" -eq 1 ]; then
+    library="$lib_dir/libsertos_posix_instrumented.a"
+else
+    library="$lib_dir/libsertos_posix.a"
+fi
 
 mkdir -p "$lib_dir" "$obj_dir"
 
@@ -50,9 +72,20 @@ echo "[TOOLCHAIN] ar=$(command -v ar)"
 echo "[TOOLCHAIN] size=$(command -v size)"
 
 objects=()
-sources=("${core_sources[@]}" "${module_sources[@]}" port/posix/port_posix.c)
 
-for source in "${sources[@]}"; do
+for source in "${core_sources[@]}"; do
+    object="$obj_dir/$(basename "${source%.*}").o"
+    echo "[BUILD] $source"
+    core_cflags=()
+    if [ "$instrumented" -eq 1 ]; then
+        core_cflags+=("-finstrument-functions")
+    fi
+    gcc -O2 -Wall -Wextra -pedantic -std=c99 "${includes[@]}" "${core_cflags[@]}" -c "$source" -o "$object"
+    objects+=("$object")
+done
+
+other_sources=("${module_sources[@]}" port/posix/port_posix.c)
+for source in "${other_sources[@]}"; do
     object="$obj_dir/$(basename "${source%.*}").o"
     echo "[BUILD] $source"
     gcc -O2 -Wall -Wextra -pedantic -std=c99 "${includes[@]}" -c "$source" -o "$object"

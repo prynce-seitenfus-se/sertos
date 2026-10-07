@@ -12,11 +12,14 @@ pushd "%SCRIPT_DIR%"
 set "CHOSEN_TARGET="
 set "CUSTOM_TOOLCHAIN="
 set "CLEAN_BUILD=0"
+set "INSTRUMENTED_BUILD=0"
 
-for %%A in ("%~1" "%~2" "%~3") do (
+for %%A in ("%~1" "%~2" "%~3" "%~4") do (
     if not "%%~A"=="" (
         if /i "%%~A"=="-c" set "CLEAN_BUILD=1"
         if /i "%%~A"=="--clean" set "CLEAN_BUILD=1"
+        if /i "%%~A"=="-i" set "INSTRUMENTED_BUILD=1"
+        if /i "%%~A"=="--instrumented" set "INSTRUMENTED_BUILD=1"
         if /i "%%~A"=="-h" goto :show_help
         if /i "%%~A"=="--help" goto :show_help
         if /i "%%~A"=="/?" goto :show_help
@@ -209,7 +212,11 @@ echo [SOURCE] %SCRIPT_DIR%
 echo [TOOLCHAIN] WSL native Linux (gcc, ar, size)
 echo ============================================================
 
-wsl.exe --cd "%SCRIPT_DIR%" -- bash ./build.sh
+if "%INSTRUMENTED_BUILD%"=="1" (
+    wsl.exe --cd "%SCRIPT_DIR%" -- bash ./build.sh -i
+) else (
+    wsl.exe --cd "%SCRIPT_DIR%" -- bash ./build.sh
+)
 if errorlevel 1 (
     echo [ERROR] Native Linux build failed in WSL.
     set "BUILD_FAIL=1"
@@ -298,19 +305,39 @@ if not exist "%LIB_OUT%" mkdir "%LIB_OUT%"
 set "OBJ_DIR=build\%HOST_TARGET%"
 if not exist "%OBJ_DIR%" mkdir "%OBJ_DIR%"
 
-set "HOST_LIB=%LIB_OUT%\libsertos_%HOST_TARGET%.a"
+if "%INSTRUMENTED_BUILD%"=="1" (
+    set "HOST_LIB=%LIB_OUT%\libsertos_%HOST_TARGET%_instrumented.a"
+    set "EXTRA_CORE_FLAGS=-finstrument-functions"
+    set "BUILD_DESC=%HOST_TARGET% host architecture (Instrumented)"
+) else (
+    set "HOST_LIB=%LIB_OUT%\libsertos_%HOST_TARGET%.a"
+    set "EXTRA_CORE_FLAGS="
+    set "BUILD_DESC=%HOST_TARGET% host architecture"
+)
 
 echo.
 echo ============================================================
-echo [BUILD] Compiling SertOS for %HOST_TARGET% host architecture...
+echo [BUILD] Compiling SertOS for !BUILD_DESC!...
 echo [TOOLCHAIN] %HOST_TOOLCHAIN%
 echo ============================================================
 
 set "PORT_SRC=port\windows\port_windows.c"
-set "SRCS_TO_BUILD=%CORE_SRCS% %MODULE_SRCS% %PORT_SRC%"
 set "OBJS="
 
-for %%S in (%SRCS_TO_BUILD%) do (
+for %%S in (%CORE_SRCS%) do (
+    set "OBJ_FILE=%OBJ_DIR%\%%~nS.o"
+    set "OBJS=!OBJS! "!OBJ_FILE!""
+
+    echo [COMPILE] %%S
+    "%HOST_CC%" -O2 -Wall -Wextra -pedantic -std=c99 !EXTRA_CORE_FLAGS! %INCLUDES% -c "%%S" -o "!OBJ_FILE!"
+    if !ERRORLEVEL! neq 0 (
+        echo [ERROR] Compiler failed while compiling %%S. See the diagnostic above.
+        set "BUILD_FAIL=1"
+        goto :eof
+    )
+)
+
+for %%S in (%MODULE_SRCS% %PORT_SRC%) do (
     set "OBJ_FILE=%OBJ_DIR%\%%~nS.o"
     set "OBJS=!OBJS! "!OBJ_FILE!""
 
@@ -414,20 +441,39 @@ if "%ARM_TARGET%"=="cortex-m0" (
     set "LIB_NAME=libsertos_cortex_m55.a"
 )
 
-set "ARM_LIB=%LIB_OUT%\%LIB_NAME%"
+if "%INSTRUMENTED_BUILD%"=="1" (
+    set "ARM_LIB=%LIB_OUT%\%LIB_NAME:~0,-2%_instrumented.a"
+    set "EXTRA_CORE_FLAGS=-finstrument-functions"
+    set "BUILD_DESC=%ARM_TARGET% (Instrumented)"
+) else (
+    set "ARM_LIB=%LIB_OUT%\%LIB_NAME%"
+    set "EXTRA_CORE_FLAGS="
+    set "BUILD_DESC=%ARM_TARGET%"
+)
 
 echo.
 echo ============================================================
-echo [BUILD] Compiling SertOS for %ARM_TARGET%...
+echo [BUILD] Compiling SertOS for !BUILD_DESC!...
 echo [TOOLCHAIN] %ARM_TOOLCHAIN%
 echo ============================================================
 
 set "PORT_DIR=port\arm\%ARM_TARGET%"
 set "PORT_SRCS=%PORT_DIR%\port_cpu.c %PORT_DIR%\port_context.s"
-set "ALL_ARM_SRCS=%CORE_SRCS% %MODULE_SRCS% %PORT_SRCS%"
 set "OBJS="
 
-for %%S in (%ALL_ARM_SRCS%) do (
+for %%S in (%CORE_SRCS%) do (
+    set "OBJ_FILE=%OBJ_DIR%\%%~nS.o"
+    set "OBJS=!OBJS! "!OBJ_FILE!""
+
+    "%ARM_CC%" !ARCH_FLAGS! -Os -ffreestanding -ffunction-sections -fdata-sections -Wall -Wextra -pedantic -std=c99 !EXTRA_CORE_FLAGS! %INCLUDES% -c "%%S" -o "!OBJ_FILE!"
+    if !ERRORLEVEL! neq 0 (
+        echo [ERROR] Failed compiling %%S for %ARM_TARGET%
+        set "BUILD_FAIL=1"
+        goto :eof
+    )
+)
+
+for %%S in (%MODULE_SRCS% %PORT_SRCS%) do (
     set "OBJ_FILE=%OBJ_DIR%\%%~nS.o"
     set "OBJS=!OBJS! "!OBJ_FILE!""
 
@@ -502,20 +548,38 @@ set "OBJ_DIR=build\riscv\%RISCV_PROFILE%"
 if not exist "%OBJ_DIR%" mkdir "%OBJ_DIR%"
 
 set "ARCH_FLAGS=-march=%RISCV_MARCH% -mabi=%RISCV_MABI%"
-set "RISCV_LIB=%LIB_OUT%\libsertos_%RISCV_PROFILE%.a"
+if "%INSTRUMENTED_BUILD%"=="1" (
+    set "RISCV_LIB=%LIB_OUT%\libsertos_%RISCV_PROFILE%_instrumented.a"
+    set "EXTRA_CORE_FLAGS=-finstrument-functions"
+    set "BUILD_DESC=RISC-V %RISCV_MARCH% (%RISCV_MABI%) (Instrumented)"
+) else (
+    set "RISCV_LIB=%LIB_OUT%\libsertos_%RISCV_PROFILE%.a"
+    set "EXTRA_CORE_FLAGS="
+    set "BUILD_DESC=RISC-V %RISCV_MARCH% (%RISCV_MABI%)"
+)
 
 echo.
 echo ============================================================
-echo [BUILD] Compiling SertOS for RISC-V %RISCV_MARCH% (%RISCV_MABI%)...
+echo [BUILD] Compiling SertOS for !BUILD_DESC!...
 echo [TOOLCHAIN] %RISCV_TOOLCHAIN%
 echo ============================================================
 
 set "PORT_DIR=port\riscv"
 set "PORT_SRCS=%PORT_DIR%\port_cpu.c %PORT_DIR%\port_context.S"
-set "ALL_RISCV_SRCS=%CORE_SRCS% %MODULE_SRCS% %PORT_SRCS%"
 set "OBJS="
 
-for %%S in (%ALL_RISCV_SRCS%) do (
+for %%S in (%CORE_SRCS%) do (
+    set "OBJ_FILE=%OBJ_DIR%\%%~nS.o"
+    set "OBJS=!OBJS! !OBJ_FILE!"
+    "%RISCV_CC%" %ARCH_FLAGS% -O2 -Wall -Wextra -std=c99 -ffunction-sections -fdata-sections !EXTRA_CORE_FLAGS! %INCLUDES% -c "%%S" -o "!OBJ_FILE!"
+    if !ERRORLEVEL! neq 0 (
+        echo [ERROR] Compilation failed: %%S
+        set "BUILD_FAIL=1"
+        goto :eof
+    )
+)
+
+for %%S in (%MODULE_SRCS% %PORT_SRCS%) do (
     set "OBJ_FILE=%OBJ_DIR%\%%~nS.o"
     set "OBJS=!OBJS! !OBJ_FILE!"
     "%RISCV_CC%" %ARCH_FLAGS% -O2 -Wall -Wextra -std=c99 -ffunction-sections -fdata-sections %INCLUDES% -c "%%S" -o "!OBJ_FILE!"
@@ -558,10 +622,11 @@ goto :eof
 :: -----------------------------------------------------------------------------
 :show_help
 echo.
-echo Usage: build.bat [-c^|--clean] [TARGET] [TOOLCHAIN_PATH]
+echo Usage: build.bat [-c^|--clean] [-i^|--instrumented] [TARGET] [TOOLCHAIN_PATH]
 echo.
 echo Options:
-echo   -c, --clean  Remove generated build and library outputs before building
+echo   -c, --clean         Remove generated build and library outputs before building
+echo   -i, --instrumented  Build the instrumented static library variant (-finstrument-functions)
 echo.
 echo Targets:
 echo   all         Build host, ARM Cortex, and all 4 RISC-V libraries (default)
