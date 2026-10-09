@@ -95,6 +95,7 @@ endforeach()
 
 target_compile_options(sertos_kernel_api_instrumented PRIVATE
     "$<$<COMPILE_LANGUAGE:C>:-finstrument-functions>"
+    "$<$<COMPILE_LANGUAGE:C>:-finstrument-functions-exclude-file-list=modules/>"
 )
 
 if(SERTOS_PORT STREQUAL "cortex-m0plus")

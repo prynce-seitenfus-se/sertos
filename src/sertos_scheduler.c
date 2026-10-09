@@ -91,6 +91,11 @@ static void (*s_tick_hook)(void) = NULL;
 static void (*s_idle_hook)(void) = NULL;
 
 /**
+ * @brief Optional user context-switch hook callback.
+ */
+static void (*s_switch_hook)(SertosTaskHandle prev, SertosTaskHandle next) = NULL;
+
+/**
  * @brief Static allocation storage for default system Idle Task.
  */
 static SertosTaskControlBlock s_idle_tcb;
@@ -206,6 +211,7 @@ SertosStatus sertos_scheduler_init_with_config(const SertosConfig* config)
         s_time_slicing_enabled = config->enable_time_slicing;
         s_tick_hook = config->tick_hook;
         s_idle_hook = config->idle_hook;
+        s_switch_hook = config->switch_hook;
         sertos_stats_set_enabled(config->enable_runtime_stats);
 
         if ((config->idle_task_stack != NULL) &&
@@ -221,6 +227,7 @@ SertosStatus sertos_scheduler_init_with_config(const SertosConfig* config)
         s_time_slicing_enabled = (SERTOS_CONFIG_TIME_SLICING != 0U);
         s_tick_hook = NULL;
         s_idle_hook = NULL;
+        s_switch_hook = NULL;
         sertos_stats_set_enabled(false);
         idle_cfg.stack_buffer = s_idle_stack;
         idle_cfg.stack_size = sizeof(s_idle_stack);
@@ -361,6 +368,9 @@ __attribute__((no_instrument_function)) SertosTaskControlBlock* sertos_scheduler
         sertos_current_tcb = next_task;
         sertos_current_tcb->state = SERTOS_TASK_STATE_RUNNING;
         sertos_stats_on_switch(prev_task, next_task);
+        if ((s_switch_hook != NULL) && (prev_task != next_task)) {
+            s_switch_hook(prev_task, next_task);
+        }
     }
 
     return sertos_current_tcb;

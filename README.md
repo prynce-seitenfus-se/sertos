@@ -125,12 +125,21 @@ void app_init(void)
         .idle_task_stack_size= sizeof(s_custom_idle_stack),
         .tick_hook           = custom_tick_hook,      /* Optional tick callback */
         .idle_hook           = NULL,                  /* Optional idle loop callback */
-        .enable_runtime_stats= false                  /* Enable per-task CPU telemetry (see below) */
+        .enable_runtime_stats= false,                 /* Enable per-task CPU telemetry (see below) */
+        .switch_hook         = NULL                   /* Optional context-switch callback */
     };
 
     (void)sertos_scheduler_init_with_config(&cfg);
 }
 ```
+
+`switch_hook(prev, next)` is called by the scheduler each time it commits a switch to a different
+task (`prev` is NULL on the first switch). It runs with interrupts masked, inside PendSV on
+Cortex-M, so it must be short, must not block or call kernel APIs, and should be declared
+`__attribute__((no_instrument_function))` when function instrumentation is used. A typical user is
+the profiler's per-context mode (`profiler_context_switch`). Zero-initialize `SertosConfig` (or use
+designated initializers) so unused hooks are NULL. Adding this field changed the `SertosConfig`
+layout; rebuild applications against the matching static libraries.
 
 Calling `sertos_scheduler_init()` remains supported as a zero-overhead convenience wrapper that applies default configuration parameters.
 

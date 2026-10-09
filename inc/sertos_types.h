@@ -89,6 +89,14 @@ typedef struct SertosConfig {
     void (*tick_hook)(void);            /**< Optional user callback invoked monotonically on each scheduler tick (or NULL). */
     void (*idle_hook)(void);            /**< Optional user callback invoked in the Idle task loop (or NULL). */
     bool enable_runtime_stats;          /**< True to enable per-task runtime statistics accounting on each context switch (default false). */
+    /**
+     * Optional context-switch callback (or NULL), invoked with interrupts masked
+     * after the scheduler commits a switch from prev to next (prev != next; prev
+     * is NULL on the first switch). On Cortex-M it runs inside PendSV: it must
+     * be short, must not block or call kernel APIs, and should be declared
+     * __attribute__((no_instrument_function)).
+     */
+    void (*switch_hook)(SertosTaskHandle prev, SertosTaskHandle next);
 } SertosConfig;
 
 #endif /* SERTOS_TYPES_H */
